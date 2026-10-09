@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1121">
+  <meta name="description" content="TradeMaster Pro: calculadora de trading y gestión de riesgo para operaciones LONG y SHORT.">
+  <meta name="application-name" content="TradeMaster Pro">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TradeMaster">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>TradeMaster Pro</title>
+  <script src="./trade-math.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand"><span>Trade</span><span class="gradient-text">Master</span><span class="brand-pro">PRO</span></div>
+        <div class="header-actions">
+          <button type="button" id="theme-toggle" class="icon-button" aria-label="Cambiar tema" title="Cambiar tema">
+            <svg class="icon" id="theme-icon" aria-hidden="true"><use href="./icons/ui-icons.svg#sun"></use></svg>
+          </button>
+          <button type="button" id="language-toggle" class="pill-button" aria-label="Cambiar idioma">
+            <svg class="icon tiny" aria-hidden="true"><use href="./icons/ui-icons.svg#globe"></use></svg>
+            <span id="lang-display">ES</span>
+          </button>
+        </div>
+      </div>
+      <nav class="tab-bar" aria-label="Secciones">
+        <button type="button" id="btn-tab-calc" class="tab active" data-i18n="tab_calc" aria-selected="true" aria-controls="section-calc">Calculadora</button>
+        <button type="button" id="btn-tab-risk" class="tab" data-i18n="tab_risk" aria-selected="false" aria-controls="section-risk">Gestión de Riesgo</button>
+      </nav>
+    </header>
+
+    <main class="app-main">
+      <section id="section-calc" class="section-content" aria-label="Calculadora de trading">
+        <div class="direction-switch" role="group" aria-label="Dirección de la operación">
+          <button type="button" id="btn-long" class="direction-btn active long">LONG</button>
+          <button type="button" id="btn-short" class="direction-btn">SHORT</button>
+        </div>
+
+        <div class="panel">
+          <label class="label" for="c-margin" data-i18n="margin">Margen (USDT)</label>
+          <div class="currency-field"><span>$</span><input id="c-margin" type="number" inputmode="decimal" min="0" step="any" placeholder="100" autocomplete="off"></div>
+        </div>
+
+        <div class="panel">
+          <label class="label" for="c-leverage-input" data-i18n="leverage">Apalancamiento</label>
+          <div class="lever-controls">
+            <button type="button" class="step-button" data-step-prefix="c" data-step="-1" aria-label="Reducir apalancamiento"><svg class="icon"><use href="./icons/ui-icons.svg#minus"></use></svg></button>
+            <div class="lever-input-wrap"><input id="c-leverage-input" type="number" inputmode="numeric" value="10" min="1" max="125" step="1" aria-label="Apalancamiento calculadora"><span>x</span></div>
+            <button type="button" class="step-button" data-step-prefix="c" data-step="1" aria-label="Aumentar apalancamiento"><svg class="icon"><use href="./icons/ui-icons.svg#plus"></use></svg></button>
+          </div>
+          <input id="c-leverage-slider" class="range" type="range" min="1" max="125" value="10" step="1" aria-label="Ajustar apalancamiento calculadora">
+        </div>
+
+        <div class="panel price-panel">
+          <div class="entry-line">
+            <div class="field-underline">
+              <label class="label" for="c-entry" data-i18n="entry_price">Precio Entrada</label>
+              <input id="c-entry" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00" autocomplete="off">
+            </div>
+            <div class="liq-output">
+              <span class="label amber" data-i18n="liq_price">Precio Liq. (est.)</span>
+              <output id="c-liq-price">--</output>
+            </div>
+          </div>
+          <div class="two-columns">
+            <div class="field-underline">
+              <label class="label green" for="c-tp" data-i18n="take_profit">Take Profit</label>
+              <input id="c-tp" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00" autocomplete="off">
+            </div>
+            <div class="field-underline">
+              <label class="label red" for="c-sl" data-i18n="stop_loss">Stop Loss</label>
+              <input id="c-sl" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
+        <div id="liq-alert" class="warning-panel" role="alert" hidden>
+          <svg class="icon warning-icon" aria-hidden="true"><use href="./icons/ui-icons.svg#alert-triangle"></use></svg>
+          <div><strong data-i18n="liq_alert_title">¡Cuidado! Riesgo de liquidación.</strong><div data-i18n="liq_alert_desc">Tu Stop Loss está más allá del precio de liquidación estimado.</div></div>
+        </div>
+        <div id="trade-warning" class="note error-note" role="status" hidden></div>
+        <label class="checkbox-label"><input id="c-fees-toggle" type="checkbox"><span data-i18n="include_fees">Incluir comisiones (0,04 % por lado, estimado)</span></label>
+
+        <div id="c-results" class="results-panel dimmed" aria-live="polite">
+          <div class="result-line">
+            <span class="result-label" data-i18n="profit_tp">Ganancia (TP)</span>
+            <div class="result-values"><strong id="c-tp-pnl" class="green-text">--</strong><small id="c-tp-net">--</small></div>
+          </div>
+          <div class="result-line last">
+            <span class="result-label" data-i18n="loss_sl">Pérdida (SL)</span>
+            <div class="result-values"><strong id="c-sl-pnl" class="red-text">--</strong><small id="c-sl-net">--</small></div>
+          </div>
+        </div>
+        <p class="disclaimer" data-i18n="calc_disclaimer">El precio de liquidación es orientativo: no incluye margen de mantenimiento, funding ni reglas específicas del exchange. No utilices esta estimación como precio real de liquidación.</p>
+      </section>
+
+      <section id="section-risk" class="section-content" aria-label="Gestión de riesgo" hidden>
+        <div class="info-panel" data-i18n="risk_desc">Calculá el tamaño de la posición según cuánto estás dispuesto a arriesgar.</div>
+
+        <div class="panel">
+          <label class="label" for="r-balance" data-i18n="balance">Balance Cuenta (USDT)</label>
+          <div class="currency-field"><span>$</span><input id="r-balance" type="number" inputmode="decimal" min="0" step="any" placeholder="1000" autocomplete="off"></div>
+          <div class="risk-percent-head"><label class="label" for="r-percent" data-i18n="risk_amt">Riesgo ($)</label><output id="r-risk-amt">$0.00</output></div>
+          <div class="risk-slider-row"><input id="r-percent" class="range" type="range" min="0.1" max="10" step="0.1" value="1" aria-label="Porcentaje de riesgo"><output id="r-percent-display">1.0%</output></div>
+        </div>
+
+        <div class="panel">
+          <label class="label" for="r-leverage-input" data-i18n="leverage_desired">Apalancamiento Deseado</label>
+          <div class="lever-controls">
+            <button type="button" class="step-button" data-step-prefix="r" data-step="-1" aria-label="Reducir apalancamiento"><svg class="icon"><use href="./icons/ui-icons.svg#minus"></use></svg></button>
+            <div class="lever-input-wrap"><input id="r-leverage-input" type="number" inputmode="numeric" value="10" min="1" max="125" step="1" aria-label="Apalancamiento riesgo"><span>x</span></div>
+            <button type="button" class="step-button" data-step-prefix="r" data-step="1" aria-label="Aumentar apalancamiento"><svg class="icon"><use href="./icons/ui-icons.svg#plus"></use></svg></button>
+          </div>
+          <input id="r-leverage-slider" class="range" type="range" min="1" max="125" value="10" step="1" aria-label="Ajustar apalancamiento riesgo">
+        </div>
+
+        <div class="two-columns risk-prices">
+          <div class="panel"><label class="label" for="r-entry" data-i18n="entry_price">Precio Entrada</label><input id="r-entry" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00" autocomplete="off"></div>
+          <div class="panel"><label class="label" for="r-sl" data-i18n="stop_loss">Stop Loss</label><input id="r-sl" class="red-text" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00" autocomplete="off"></div>
+        </div>
+
+        <div id="r-results" class="risk-results dimmed" aria-live="polite">
+          <span data-i18n="margin_required">Margen Requerido</span>
+          <strong id="r-result-margin">--</strong>
+          <small id="r-lev-rec">--</small>
+          <small id="r-position-size">--</small>
+        </div>
+        <div id="risk-warning" class="note error-note" role="status" hidden></div>
+        <p class="disclaimer" data-i18n="risk_disclaimer">Cálculo orientativo sin comisiones ni deslizamiento. El apalancamiento no reduce el riesgo monetario de la posición: solo cambia el margen necesario.</p>
+      </section>
+    </main>
+
+    <footer class="ad-footer" aria-label="Espacio publicitario"><div class="ad-placeholder" data-i18n="ad_space">ESPACIO PUBLICIDAD</div></footer>
+  </div>
+</body>
+</html>
